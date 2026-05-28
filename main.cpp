@@ -26,6 +26,9 @@
 #include <stdio.h>
 
 #define PI 3.14159365258979
+#define grid_size 100
+#define particle_number 100
+#define time_steps 1000
 
 struct particle {
     double position[2];
@@ -35,6 +38,17 @@ struct particle {
 double distance(particle const& a, particle const& b) {
     double dx = a.position[0] - b.position[0];
     double dy = a.position[1] - b.position[1];
+    return sqrt(dx*dx + dy*dy);
 };
+
+struct bin {
+    particle particles[particle_number];
+};
+
+struct bin bin_grid[grid_size*grid_size];
+#define bin_grid(x,y) bin_grid[x + y*grid_size]
+// because x goes from 0 to grid_size - 1...
+
+
 
 
