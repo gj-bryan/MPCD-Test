@@ -20,3 +20,21 @@
 // Part D:
 // This will be the visualisation step, where we use C++ and open-gl to 
 // visualise what is happening.
+
+#include <math.h>
+#include <time.h>
+#include <stdio.h>
+
+#define PI 3.14159365258979
+
+struct particle {
+    double position[2];
+    double velocity[2];
+};
+
+double distance(particle const& a, particle const& b) {
+    double dx = a.position[0] - b.position[0];
+    double dy = a.position[1] - b.position[1];
+};
+
+
