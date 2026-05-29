@@ -24,16 +24,17 @@
 #include <math.h>
 #include <time.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define PI 3.14159365258979
 #define grid_size 100
 #define particle_number 100
 #define time_steps 1000
 
-struct particle {
+typedef struct {
     double position[2];
     double velocity[2];
-};
+} particle;
 
 double distance(particle const& a, particle const& b) {
     double dx = a.position[0] - b.position[0];
@@ -41,14 +42,38 @@ double distance(particle const& a, particle const& b) {
     return sqrt(dx*dx + dy*dy);
 };
 
-struct bin {
-    particle particles[particle_number];
+typedef struct {
+    particle *particles=NULL;
+    size_t pnumber=0;
+    size_t capacity=0;
+} bin;
+
+void add_particle(bin *bina, particle particla) {
+    // Adds the second argument (particle) to the first argument (bin)
+    // If the particle number currently equals the capacity, capacity
+    // is extended. 
+    if(bina->capacity == bina->pnumber){
+        size_t newcap = bina->capacity ? bina->capacity*2 : 20;
+        particle *newparticles= (particle*)realloc(bina->particles, newcap*sizeof(particle));
+        bina->particles = newparticles;
+        bina->capacity = newcap;
+    }
+    bina->particles[bina->pnumber++]=particla;
 };
 
-struct bin bin_grid[grid_size*grid_size];
+// We use a fixed array here.
+bin bin_grid[grid_size*grid_size];
 #define bin_grid(x,y) bin_grid[x + y*grid_size]
 // because x goes from 0 to grid_size - 1...
 
+// Use malloc here because this will be big.
+bin *bin_grid_storage = (bin *)malloc(grid_size*grid_size*time_steps*sizeof(bin));
+// A shortcut for accessing the bin grid storage.
+#define bin_grid_storage(l,x,y) bin_grid_storage[(l*grid_size + y)*grid_size +x]
 
-
+int main() {
+    particle billiebob;
+    add_particle(bin_grid_storage(1,0,0), billiebob);
+    return 0;
+;}
 
