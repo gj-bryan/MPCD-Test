@@ -1,6 +1,6 @@
 // We are going to break this up into parts
 // Part A: 
-// We will make a struct for a single particle and its position
+// We will make a struct for a single particle and its position, velocity.
 // We will then define a "rotation" function, to rotate a vector about origin
 // Part B: 
 // We will make an efficient 1D indexable array for all particles
@@ -32,26 +32,42 @@
 #define time_steps 1000
 
 typedef struct {
-    double position[2];
-    double velocity[2];
+    double x;
+    double y;
+} vec2;
+
+typedef struct {
+    vec2 position;
+    vec2 velocity;
 } particle;
 
-double distance(particle const& a, particle const& b) {
-    double dx = a.position[0] - b.position[0];
-    double dy = a.position[1] - b.position[1];
+// A basic distance function. Playing with C++ syntax here -- & is similar to * as in it is a pointer, but one can use the "." instead of the "->" and it is read only. Fun stuff I suppose, advantage is that it won't break because I modified it stupidly, and I don't have to pay to copy it. Note that to make this backwards compatible with C I'll need to rewrite this as * instead, and remove "const", and make "." into "->".
+double distance(particle const &a, particle const &b) {
+    double dx = a.position.x - b.position.x;
+    double dy = a.position.y - b.position.y;
     return sqrt(dx*dx + dy*dy);
 };
 
+// Takes a given vector (vec2 object) and returns the same vector rotated randomly.
+vec2 rotate_random(vec2 orig_vector) {
+    vec2 new_vector;
+    double random_angle = 2*PI*(double)rand()/((double)RAND_MAX);
+    double new_x = cos(random_angle)*orig_vector.x - sin(random_angle)*orig_vector.y;
+    double new_y = cos(random_angle)*orig_vector.y + sin(random_angle)*orig_vector.x;
+    new_vector.x = new_x;
+    new_vector.y = new_y;
+    return new_vector;
+}
+
+// The so-called "Bin" struct. Has particles, particle number, and particle capacity as an attribute. Particle capacity is automatically extended if more particles are added here than expected. The structure of "*particles" is a pointer to a malloc.
 typedef struct {
     particle *particles=NULL;
     size_t pnumber=0;
     size_t capacity=0;
 } bin;
 
+// Adds a particle to a bin. Note that this takes a pointer so be sure to use the "&" when passing something in here.
 void add_particle(bin *bina, particle particla) {
-    // Adds the second argument (particle) to the first argument (bin)
-    // If the particle number currently equals the capacity, capacity
-    // is extended. 
     if(bina->capacity == bina->pnumber){
         size_t newcap = bina->capacity ? bina->capacity*2 : 20;
         particle *newparticles= (particle*)realloc(bina->particles, newcap*sizeof(particle));
@@ -61,19 +77,22 @@ void add_particle(bin *bina, particle particla) {
     bina->particles[bina->pnumber++]=particla;
 };
 
-// We use a fixed array here.
+// We use a fixed array containing all the bins at "present"
 bin bin_grid[grid_size*grid_size];
+// A shortcut for accessing the bin grid fixed array.
 #define bin_grid(x,y) bin_grid[x + y*grid_size]
 // because x goes from 0 to grid_size - 1...
 
-// Use malloc here because this will be big.
-bin *bin_grid_storage = (bin *)malloc(grid_size*grid_size*time_steps*sizeof(bin));
-// A shortcut for accessing the bin grid storage.
-#define bin_grid_storage(l,x,y) bin_grid_storage[(l*grid_size + y)*grid_size +x]
+// A malloc of bins representing the history of all bins. 
+bin *bin_grid_storage = (bin*)malloc(grid_size*grid_size*time_steps*sizeof(bin));
+// A shortcut for accessing the "bin grid storage".
+#define BGS(l,x,y) bin_grid_storage[(l*grid_size + y)*grid_size +x]
 
 int main() {
-    particle billiebob;
-    add_particle(bin_grid_storage(1,0,0), billiebob);
+    for (int t = 0; t < time_steps; t++) {
+        
+    }
+
     return 0;
 ;}
 
