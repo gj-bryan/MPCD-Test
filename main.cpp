@@ -168,6 +168,10 @@ int main() {
             p->position.y += p->velocity.y*time_dt;
         }
         // UPDATE BIN MEMBERS
+
+        // A couple of ways to go about this
+        // Most efficient option: loop through each bin. For each bin, check if each particle is in the bin. If the particle is not in the bin, search nearby bins for the particle (think of how to do this later). Once the correct bin is found, remove the particle from the current bin and add it to the correct/new bin.
+        // We can search for the bin the particle should be in by rounding its position to the nearest granularity set by 1/bin_number, and indexing that x,y position probability.
         
     }
 
