@@ -134,7 +134,7 @@ int main() {
     for (int x = 0; x < grid_size; x++) {
         for (int y =0;y<grid_size; y++) {
             for (int j=0; j< particle_number; j++) {
-                particle p = particle_array((grid_size*x+y)*grid_size + j);
+                particle p = particle_array((grid_size*x+y)*particle_number + j);
                 bin *b = &bin_grid(x,y);
                 // Initialise a random position in the bin.
                 double random_number_x = (double)rand()/((double)RAND_MAX);
