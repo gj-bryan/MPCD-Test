@@ -27,7 +27,7 @@
 #include <stdlib.h>
 
 #define PI 3.14159365258979
-#define grid_size 100
+#define grid_size 30
 #define particle_number 20
 #define time_steps 1000
 #define time_dt 0.1
@@ -79,25 +79,14 @@ double boltzmann_velocity() {
     return sqrt(2*b_number/mass);
 }
 
-// The so-called "Bin" struct. Has particles, particle number, and particle capacity as an attribute. Particle capacity is automatically extended if more particles are added here than expected. The structure of "*particles" is a pointer to a malloc.
+// The so-called "Bin" struct. Has particle ids, particle number, and particle capacity as an attribute. Particle capacity is automatically extended if more particle ids are added here than expected. The structure of "*particle_ids" is a pointer to a malloc.
 typedef struct {
-    particle *particles=NULL;
+    size_t *particle_ids=NULL;
     size_t pnumber=0;
     size_t capacity=0;
     vec2 position;
     vec2 size;
 } bin;
-
-// Adds a particle to a bin. Note that this takes a pointer so be sure to use the "&" when passing something in here.
-void add_particle(bin *bina, particle particla) {
-    if(bina->capacity == bina->pnumber){
-        size_t newcap = bina->capacity ? bina->capacity*2 : 20;
-        particle *newparticles= (particle*)realloc(bina->particles, newcap*sizeof(particle));
-        bina->particles = newparticles;
-        bina->capacity = newcap;
-    }
-    bina->particles[bina->pnumber++]=particla;
-};
 
 // We use a fixed array containing all the bins at "present"
 bin bin_grid[grid_size*grid_size];
@@ -105,17 +94,54 @@ bin bin_grid[grid_size*grid_size];
 #define bin_grid(x,y) bin_grid[x + y*grid_size]
 // because x goes from 0 to grid_size - 1...
 
-// We use a fixed array containing all the particles at "present"
+// We use a fixed array containing all the particles at "present." In this way, each particle will have a unique ID. We can ccess the particle itself from the bins (which include the indices) or directly here.
 particle particle_array[grid_size*grid_size*particle_number];
+
 // A shortcut for accessing the particle array.
 #define particle_array(i) particle_array[i]
 
-// A malloc of bins representing the history of all bins. 
-bin *bin_grid_storage = (bin*)malloc(grid_size*grid_size*time_steps*sizeof(bin));
-// A shortcut for accessing the "bin grid storage".
-#define BGS(l,x,y) bin_grid_storage[(l*grid_size + y)*grid_size +x]
+// Adds a particle ID to a bin. Note that this takes a pointer so be sure to use the "&" when passing something in here.
+void add_particle(bin *bina, size_t particle_ida) {
+    if(bina->capacity == bina->pnumber){
+        size_t newcap = bina->capacity ? bina->capacity*2 : 20;
+        size_t *new_particles= (size_t*)realloc(bina->particle_ids, newcap*sizeof(size_t));
+        bina->particle_ids = new_particles;
+        bina->capacity = newcap;
+    }
+    bina->particle_ids[bina->pnumber++]=particle_ida;
+};
+
+// Removes a particle ID from a bin.
+void remove_particle(bin *bina, size_t particle_ida) {
+    for(int j=0;j<bina->pnumber;j++) {
+        if (particle_ida == bina->particle_ids[j]) {
+            // We use the "swap and pop" trick. Essentially we take the last entry and put it here, and decrease the length of the entries (pnumber).
+            bina->particle_ids[j]=bina->particle_ids[--bina->pnumber];
+            return;
+        }
+    }
+}
+
+// Determines if a particle is physically located inside a proposed bin. Returns true/false if particle is in/outside the domain of the bin.
+bool is_in_bin(bin *bina, particle particla) {
+    if(particla.position.x >= bina->position.x && particla.position.x < bina->position.x+bina->size.x && particla.position.y >= bina->position.y && particla.position.y < bina->position.y+bina->size.y) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
 
 int main() {
+
+    // A malloc of bins representing the history of all bins. 
+    bin *bin_grid_storage = (bin*)malloc(grid_size*grid_size*time_steps*sizeof(bin));
+    // A shortcut for accessing the "bin grid storage".
+    #define BGS(l,x,y) bin_grid_storage[(l*grid_size + y)*grid_size +x]
+
+    particle *particle_storage = (particle*)malloc(grid_size*grid_size*particle_number*time_steps*sizeof(particle));
+    #define PS(l,n) particle_storage[(l*grid_size*grid_size*particle_number) + n]
+
     // INITIALISATION OF THE SIMULATION
     //
     // We will first initialise all the bins so that they are sorted properly according to position. N.B: The bins are initialised so that the top left corner is their position, and the bin sizes are normalised so that the sides of the total box have length 1.
@@ -134,22 +160,23 @@ int main() {
     for (int x = 0; x < grid_size; x++) {
         for (int y =0;y<grid_size; y++) {
             for (int j=0; j< particle_number; j++) {
-                particle p = particle_array((grid_size*x+y)*particle_number + j);
+                size_t ID = (size_t)((grid_size*x+y)*particle_number + j);
+                particle *p = &particle_array(ID);
                 bin *b = &bin_grid(x,y);
                 // Initialise a random position in the bin.
                 double random_number_x = (double)rand()/((double)RAND_MAX);
                 double random_number_y = (double)rand()/((double)RAND_MAX);
-                p.position.x = b->position.x + random_number_x/(double)grid_size;
-                p.position.y= b->position.y + random_number_y/(double)grid_size;
+                p->position.x = b->position.x + random_number_x/(double)grid_size;
+                p->position.y= b->position.y + random_number_y/(double)grid_size;
                 // Create random velocity vector from the Boltzmann distribution.
                 vec2 new_velocity;
                 new_velocity.x = boltzmann_velocity();
                 new_velocity.y = 0.0;
                 vec2 rot_new_velocity = rotate_random(new_velocity);
-                p.velocity.x = rot_new_velocity.x;
-                p.velocity.y = rot_new_velocity.y;
-                // Add the particle to the bin.
-                add_particle(b,p);
+                p->velocity.x = rot_new_velocity.x;
+                p->velocity.y = rot_new_velocity.y;
+                // Add the particle ID to the bin.
+                add_particle(b,ID);
             }
         }
     }
@@ -162,18 +189,44 @@ int main() {
         // STREAMING STEP
         // 
         // UPDATE PARTICLE VELOCITIES:
-        for (int j=0; j<particle_number*grid_size*grid_size; j++) {
+
+        for (int j=0; j< grid_size*grid_size*particle_number; j++) {
             particle *p = &particle_array(j);
+            // Stream the velocities so the particles are possibly outside the bin.
             p->position.x += p->velocity.x*time_dt;
             p->position.y += p->velocity.y*time_dt;
+            p->position.x = fmod(p->position.x, 1.0);
+            p->position.y = fmod(p->position.y, 1.0);
         }
-        // UPDATE BIN MEMBERS
 
-        // A couple of ways to go about this
-        // Most efficient option: loop through each bin. For each bin, check if each particle is in the bin. If the particle is not in the bin, search nearby bins for the particle (think of how to do this later). Once the correct bin is found, remove the particle from the current bin and add it to the correct/new bin.
-        // We can search for the bin the particle should be in by rounding its position to the nearest granularity set by 1/bin_number, and indexing that x,y position probability.
-        
+        // RE-BINNING STEP
+
+        for (int x = 0; x < grid_size; x++) {
+            for (int y =0;y<grid_size; y++) {
+                bin *b = &bin_grid(x,y);
+                for (int j=0; j< b->pnumber; j++) {
+                    // The particle is assumed to in the old bin *b
+                    size_t ID = b->particle_ids[j];
+                    particle *p = &particle_array(ID);
+                    // If the particle is not in the bin:
+                    if(!is_in_bin(b, *p)) {
+                        remove_particle(b, ID);
+                        int new_x = (int)(p->position.x*grid_size);
+                        int new_y = (int)(p->position.y*grid_size);
+                        bin *new_b = &bin_grid(new_x,new_y);
+                        add_particle(new_b,ID);
+                    }
+                }
+            }
+        } 
+
+        // RECORD PARTICLES
+
+        for(int j=0; j<particle_number*grid_size*grid_size;j++) {
+            PS(t,j) = particle_array(j);
+        }
     }
+    
 
     return 0;
 ;}
